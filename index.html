@@ -28,14 +28,19 @@
             left: 0;
             width: 100%;
             text-align: center;
-            padding-bottom: 20px;
+            padding-bottom: 30px; /* 바닥 여백 */
             font-family: Arial, sans-serif;
             font-weight: bold;
-            font-size: 5vw;
+            
+            /* [수정] 타이틀 크기 대폭 확대 (5vw -> 12vw) */
+            font-size: 12vw; 
+            letter-spacing: -2px; /* 자간 좁혀서 단단하게 */
+            
             color: #282828;
             z-index: 9999;
-            pointer-events: none;
+            pointer-events: none; /* 클릭 통과 */
             user-select: none;
+            opacity: 0.9;
         }
     </style>
 </head>
@@ -44,10 +49,9 @@
 
     <script>
         // ==========================================
-        // SYNTAX CONSOLE - FIXED VERSION
+        // SYNTAX CONSOLE - FINAL VERSION
         // ==========================================
         
-        // --- Data Structure ---
         let deckA_Data = [
           { title: "TIME MEMORY", desc: "INTERACTING WITH THE FLOW", sub: "SYSTEM PROCESSING DATA STREAM A // " },
           { title: "PAST FUTURE", desc: "RECONSTRUCTING FRAGMENTS", sub: "BUFFERING SEQUENCE INITIATED // " },
@@ -63,16 +67,15 @@
           { title: "FLAT LINE", desc: "TERMINATING PROCESS", sub: "CONNECTION TERMINATED // " }
         ];
 
-        // --- Global Variables ---
         let deckA = { name: "DECK A", data: deckA_Data, index: 0, rotation: 0, targetRotation: 0, isLooping: false, visualMode: 1, sensors: [] };
         let deckB = { name: "DECK B", data: deckB_Data, index: 0, rotation: 0, targetRotation: 0, isLooping: false, visualMode: 1, sensors: [] };
         let crossFaderVal = 0.5;
         let activeDeck = deckA;
         
-        // Audio Variables
+        // Audio
         let mic;
         let oscClick, envClick, oscTone, envTone, engineOsc, noiseOsc, noiseEnv;
-        let audioStarted = false; // 오디오 시작 체크용 플래그
+        let audioStarted = false; 
 
         const DESIGN_W = 1600;
         const DESIGN_H = 900;
@@ -80,14 +83,12 @@
         let drawOffX = 0;
         let drawOffY = 0;
 
-        // Colors
         const C_BG = 250;
         const C_PANEL = 255;
         const C_TEXT = 40;
         const C_LINE_SUBTLE = 220;
         const C_SHADOW_COL = "rgba(0, 0, 0, 0.08)";
 
-        // Mobile Drag Helper
         let pmouseX_FIX = 0;
         let pmouseY_FIX = 0;
 
@@ -97,10 +98,8 @@
             rectMode(CENTER);
             textFont("Arial");
 
-            // [Audio Setup]
             try {
                 mic = new p5.AudioIn();
-                // mic.start()는 touchStarted에서 호출합니다 (브라우저 정책 준수)
                 
                 oscClick = new p5.Oscillator("square");
                 envClick = new p5.Envelope(0.001, 0.05, 0.01, 0.05);
@@ -128,15 +127,12 @@
         function draw() {
             background(C_BG);
 
-            // Scale Calculation
             let scaleW = width / DESIGN_W;
             let scaleH = height / DESIGN_H;
             drawScale = min(scaleW, scaleH);
             drawOffX = (width - DESIGN_W * drawScale) / 2;
             drawOffY = (height - DESIGN_H * drawScale) / 2;
 
-            // [Audio Processing Fix]
-            // 오디오 컨텍스트가 켜져있고 마이크가 존재할 때만 작동
             if (audioStarted && mic) {
                 let vol = mic.getLevel();
                 if (vol > 0.01) {
@@ -147,13 +143,11 @@
                 }
             }
 
-            // Physics Logic
             updateDeck(deckA);
             updateDeck(deckB);
             if (crossFaderVal < 0.45) activeDeck = deckA;
             else if (crossFaderVal > 0.55) activeDeck = deckB;
 
-            // Drawing
             push();
             translate(drawOffX, drawOffY);
             scale(drawScale);
@@ -169,7 +163,6 @@
             drawMixer(DESIGN_W / 2, DESIGN_H / 2, DESIGN_W * 0.2, DESIGN_H * 0.7, refSize);
             pop();
 
-            // Touch Debug & Cursor
             if (touches.length > 0) {
                 fill(0, 50); noStroke(); ellipse(mouseX, mouseY, 40);
                 stroke(0, 20); strokeWeight(2);
@@ -185,13 +178,10 @@
         }
 
         // --- Interaction ---
-
-        // [핵심] 오디오 강제 시작 함수
         function resumeAudio() {
             if (!audioStarted) {
                 userStartAudio().then(() => {
-                    console.log("Audio Context Started");
-                    if(mic) mic.start(); // 마이크 켜기
+                    if(mic) mic.start();
                     audioStarted = true;
                 });
             }
@@ -200,19 +190,16 @@
         function touchMoved() {
             let diffY = mouseY - pmouseY; 
             let diffX = mouseX - pmouseX;
-            
             if(abs(diffY) > 100) diffY = 0;
             if(abs(diffX) > 100) diffX = 0;
 
             if (mouseY > height * 0.75) {
-                // Fader
                 if (abs(diffX) > 0) {
                     crossFaderVal += diffX * 0.002;
                     crossFaderVal = constrain(crossFaderVal, 0, 1);
                     if (frameCount % 5 === 0) playNoise();
                 }
             } else {
-                // Deck
                 let rotSpeed = diffY * 1.5;
                 if (mouseX < width / 2) deckA.targetRotation += rotSpeed;
                 else deckB.targetRotation += rotSpeed;
@@ -221,14 +208,14 @@
         }
 
         function touchStarted() {
-            resumeAudio(); // 터치 시 오디오 켜기
+            resumeAudio();
             handleTap(mouseX, mouseY);
             return false;
         }
 
         function mousePressed() {
             if (touches.length === 0) {
-                resumeAudio(); // 클릭 시 오디오 켜기
+                resumeAudio();
                 handleTap(mouseX, mouseY);
             }
         }
@@ -245,7 +232,6 @@
             let localX = vx - DESIGN_W / 2;
             let localY = vy - DESIGN_H / 2;
 
-            // Mixer Check
             let mh = DESIGN_H * 0.7;
             let mw = DESIGN_W * 0.2;
             let ky_start = -mh * 0.3; 
@@ -260,7 +246,6 @@
                     playTone(80 + i); return;
                 }
             }
-            // Deck Check
             let deckW = DESIGN_W * 0.35; 
             let deckH = DESIGN_H * 0.6;
             let deckCenterY = (DESIGN_H * 0.35) - (DESIGN_H / 2);
@@ -357,7 +342,7 @@
             let keyCodes = deck.name === "DECK A" ? [65, 83, 68, 70] : [72, 74, 75, 76];
             for (let i = 0; i < 4; i++) {
                 let bx = (i - 1.5) * btnGap;
-                // [수정: 버튼 텍스트 사이즈 증가] s * 0.08 -> 버튼 크기는 유지
+                // [복구] 기존 비율 유지 (0.08, 텍스트 0.4)
                 drawRoundBtn(bx, btnY, min(w, h) * 0.08, keyCodes[i], btnLabels[i], deck, i);
             }
             drawKineticJogWheel(0, h * 0.15, scaleBase, deck);
@@ -371,8 +356,8 @@
             push(); rotate(deck.rotation);
             fill(C_TEXT); noStroke(); textAlign(CENTER, CENTER);
             
-            // [수정: 휠 텍스트 사이즈 대폭 증가] s * 0.045 -> s * 0.065
-            let wheelTextSize = s * 0.065; 
+            // [복구] 기존 텍스트 사이즈 (s * 0.045)
+            let wheelTextSize = s * 0.045; 
             textSize(wheelTextSize);
             drawTextRing(deck.data[deck.index].title, s * 0.18, wheelTextSize, deck, s);
             drawTextRing(deck.data[deck.index].desc, s * 0.28, wheelTextSize, deck, s);
@@ -401,8 +386,8 @@
                 let modeNum = i + 1; let isActive = activeDeck.visualMode === modeNum; let rot = isActive ? frameCount * 5 : -45;
                 drawKnob(kx, ky, knobSize, rot, isActive);
                 fill(150); noStroke(); 
-                // [수정: 믹서 숫자 텍스트 증가] refSize * 0.01 -> refSize * 0.02
-                textSize(refSize * 0.02); 
+                // [복구] 기존 텍스트 사이즈 (refSize * 0.01)
+                textSize(refSize * 0.01); 
                 text(modeNum, kx, ky + knobSize * 0.8);
             }
             drawRectBtn(0, h * 0.15, w * 0.6, h * 0.08, "SPACE", 32);
@@ -425,8 +410,8 @@
             let ledCol = isPressed || isActive ? 150 : 240; fill(ledCol); noStroke(); ellipse(s * 0.8, -s * 0.8, s * 0.2);
             if (!isPressed) applyShadow(5, 2, 2); fill(C_PANEL); noStroke(); if (isPressed) translate(0, 1); ellipse(0, 0, s); clearShadow();
             fill(C_TEXT); 
-            // [수정: 버튼 안 글자 증가] s * 0.4 -> s * 0.6
-            textSize(s * 0.6); 
+            // [복구] 기존 텍스트 사이즈 (s * 0.4)
+            textSize(s * 0.4); 
             textAlign(CENTER, CENTER); text(label, 0, 0); pop();
         }
 
@@ -434,14 +419,13 @@
             let isPressed = keyIsDown(keyCodeNum); push(); translate(x, y); let ledCol = isPressed ? 200 : 240; fill(ledCol); noStroke(); ellipse(w / 2 + 5, -h / 2 + 5, 5);
             if (!isPressed) applyShadow(5, 2, 2); fill(C_PANEL); noStroke(); if (isPressed) translate(0, 1); rect(0, 0, w, h, 6); clearShadow();
             fill(C_TEXT); 
-            // [수정: SPACE 버튼 글자 증가] h * 0.4 -> h * 0.6
-            textSize(h * 0.6); 
+            // [복구] 기존 텍스트 사이즈 (h * 0.4)
+            textSize(h * 0.4); 
             textStyle(NORMAL); textAlign(CENTER, CENTER); text(label, 0, 0); pop();
         }
 
         function drawWaveform(x, y, w, h) {
             let vol = 0; 
-            // 마이크 작동 여부 확인
             if (audioStarted && mic) vol = mic.getLevel();
             
             push(); translate(x, y); noFill(); stroke(C_LINE_SUBTLE); strokeWeight(1); beginShape();
