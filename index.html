@@ -11,16 +11,36 @@
     <style>
         body { margin: 0; padding: 0; overflow: hidden; background-color: #FAFAFA; touch-action: none; overscroll-behavior: none; }
         canvas { display: block; }
+        
+        /* [수정됨] 타이틀 스타일 */
         #syntaxconsole {
-            position: fixed; bottom: 0; left: 0; width: 100%; text-align: center;
-            padding-bottom: 20px; font-family: Arial, sans-serif; font-weight: bold;
-            font-size: 5vw; color: #282828; z-index: 9999; pointer-events: none; user-select: none;
+            position: fixed; 
+            bottom: 0; 
+            left: 0; 
+            width: 100%; 
+            text-align: center;
+            padding-bottom: 10px; /* 바닥 여백 */
+            
+            font-family: Arial, sans-serif; 
+            font-weight: 900; /* 더 두껍게 */
+            
+            /* 핵심: 화면 꽉 차게 키움 */
+            font-size: 11.5vw; 
+            letter-spacing: -2px; /* 자간 좁힘 */
+            line-height: 1;       /* 줄간격 좁힘 */
+            
+            color: #282828; 
+            opacity: 0.9;         /* 너무 튀지 않게 살짝 투명도 */
+            
+            z-index: 9999; 
+            pointer-events: none; 
+            user-select: none;
         }
     </style>
 
     <script>
         window.onerror = function(msg, url, line) {
-            alert("오류 발생!\n" + msg + "\n줄 번호: " + line);
+            // alert("오류 발생!\n" + msg + "\n줄 번호: " + line); // 이제 잘 되시면 주석 처리해도 됩니다
             return false;
         };
     </script>
@@ -70,7 +90,6 @@
         const C_LINE_SUBTLE = 220;
         const C_SHADOW_COL = "rgba(0, 0, 0, 0.08)";
 
-        // 모바일 드래그 변수
         let pmouseX_FIX = 0;
         let pmouseY_FIX = 0;
 
@@ -80,44 +99,35 @@
             rectMode(CENTER);
             textFont("Arial");
 
-            // Audio Setup Safe Mode
             try {
                 mic = new p5.AudioIn();
-                
                 oscClick = new p5.Oscillator("square");
                 envClick = new p5.Envelope(0.001, 0.05, 0.01, 0.05);
                 oscClick.start(); oscClick.amp(0);
-
                 oscTone = new p5.Oscillator("sine");
                 envTone = new p5.Envelope(0.01, 0.2, 0.1, 0.2);
                 oscTone.start(); oscTone.amp(0);
-
                 engineOsc = new p5.Oscillator("sawtooth");
                 engineOsc.freq(50);
                 engineOsc.start(); engineOsc.amp(0);
-
                 noiseOsc = new p5.Noise("white");
                 noiseEnv = new p5.Envelope(0.01, 0.1, 0, 0.1);
                 noiseOsc.start(); noiseOsc.amp(0);
             } catch (e) {
                 console.log("Audio Error: " + e);
             }
-
             initSensors(deckA);
             initSensors(deckB);
         }
 
         function draw() {
             background(C_BG);
-
-            // Scale Calc
             let scaleW = width / DESIGN_W;
             let scaleH = height / DESIGN_H;
             drawScale = min(scaleW, scaleH);
             drawOffX = (width - DESIGN_W * drawScale) / 2;
             drawOffY = (height - DESIGN_H * drawScale) / 2;
 
-            // Audio
             if (getAudioContext().state === "running" && mic) {
                 let vol = mic.getLevel();
                 if (vol > 0.01) {
@@ -128,13 +138,11 @@
                 }
             }
 
-            // Physics
             updateDeck(deckA);
             updateDeck(deckB);
             if (crossFaderVal < 0.45) activeDeck = deckA;
             else if (crossFaderVal > 0.55) activeDeck = deckB;
 
-            // Drawing
             push();
             translate(drawOffX, drawOffY);
             scale(drawScale);
@@ -150,42 +158,32 @@
             drawMixer(DESIGN_W / 2, DESIGN_H / 2, DESIGN_W * 0.2, DESIGN_H * 0.7, refSize);
             pop();
 
-            // Touch Debug
             if (touches.length > 0) {
                 fill(0, 50); noStroke(); ellipse(mouseX, mouseY, 40);
                 stroke(0, 20); strokeWeight(2);
-                line(0, height * 0.75, width, height * 0.75); // Zone line
+                line(0, height * 0.75, width, height * 0.75);
             } else {
                 drawInvertedCursor();
             }
 
             if (keyIsDown(32)) filter(INVERT);
-            
-            // 좌표 갱신 (for manual calculation)
             pmouseX_FIX = mouseX;
             pmouseY_FIX = mouseY;
         }
 
-        // --- Interaction ---
-
         function touchMoved() {
-            // p5.js touchMoved behavior fix
             let diffY = mouseY - pmouseY; 
             let diffX = mouseX - pmouseX;
-            
-            // 값이 너무 튀는 경우 방지 (모바일 버그 방지)
             if(abs(diffY) > 100) diffY = 0;
             if(abs(diffX) > 100) diffX = 0;
 
             if (mouseY > height * 0.75) {
-                // Fader Zone
                 if (abs(diffX) > 0) {
                     crossFaderVal += diffX * 0.002;
                     crossFaderVal = constrain(crossFaderVal, 0, 1);
                     if (frameCount % 5 === 0) playNoise();
                 }
             } else {
-                // Deck Zone
                 let rotSpeed = diffY * 1.5;
                 if (mouseX < width / 2) deckA.targetRotation += rotSpeed;
                 else deckB.targetRotation += rotSpeed;
@@ -219,7 +217,6 @@
             let localX = vx - DESIGN_W / 2;
             let localY = vy - DESIGN_H / 2;
 
-            // Mixer Check
             let mh = DESIGN_H * 0.7;
             let mw = DESIGN_W * 0.2;
             let ky_start = -mh * 0.3; 
@@ -234,7 +231,6 @@
                     playTone(80 + i); return;
                 }
             }
-            // Deck Check
             let deckW = DESIGN_W * 0.35; 
             let deckH = DESIGN_H * 0.6;
             let deckCenterY = (DESIGN_H * 0.35) - (DESIGN_H / 2);
@@ -255,7 +251,6 @@
             if(!checkDeckBtns(deckA, deckACenterX)) checkDeckBtns(deckB, deckBCenterX);
         }
 
-        // --- Helpers ---
         function initSensors(deck) { deck.sensors = []; }
         function updateSensors(deck, s) {
             if (deck.sensors.length === 0 || deck.lastVisualMode !== deck.visualMode) {
