@@ -1,80 +1,22 @@
 // --- Data Structure ---
 let deckA_Data = [
-  {
-    title: "TIME MEMORY",
-    desc: "INTERACTING WITH THE FLOW",
-    sub: "SYSTEM PROCESSING DATA STREAM A // ",
-  },
-  {
-    title: "PAST FUTURE",
-    desc: "RECONSTRUCTING FRAGMENTS",
-    sub: "BUFFERING SEQUENCE INITIATED // ",
-  },
-  {
-    title: "CORE LOGIC",
-    desc: "SEARCHING FOR PATTERNS",
-    sub: "ALGORITHM OPTIMIZATION RUNNING // ",
-  },
-  {
-    title: "DEEP DIVE",
-    desc: "NAVIGATING THE LAYERS",
-    sub: "DEPTH ANALYSIS COMPLETE // ",
-  },
-  {
-    title: "VOID SPACE",
-    desc: "FILLING THE EMPTY VOID",
-    sub: "NULL POINTER EXCEPTION ERROR // ",
-  },
+  { title: "TIME MEMORY", desc: "INTERACTING WITH THE FLOW", sub: "SYSTEM PROCESSING DATA STREAM A // " },
+  { title: "PAST FUTURE", desc: "RECONSTRUCTING FRAGMENTS", sub: "BUFFERING SEQUENCE INITIATED // " },
+  { title: "CORE LOGIC", desc: "SEARCHING FOR PATTERNS", sub: "ALGORITHM OPTIMIZATION RUNNING // " },
+  { title: "DEEP DIVE", desc: "NAVIGATING THE LAYERS", sub: "DEPTH ANALYSIS COMPLETE // " },
+  { title: "VOID SPACE", desc: "FILLING THE EMPTY VOID", sub: "NULL POINTER EXCEPTION ERROR // " },
 ];
 let deckB_Data = [
-  {
-    title: "SOUND WAVE",
-    desc: "VISUALIZING THE AUDIO",
-    sub: "FREQUENCY MODULATION SYNC // ",
-  },
-  {
-    title: "ECHO LOOP",
-    desc: "REPEATING THE SIGNALS",
-    sub: "FEEDBACK LOOP DETECTED // ",
-  },
-  {
-    title: "NOISE GATE",
-    desc: "FILTERING INTERFERENCE",
-    sub: "THRESHOLD LIMIT REACHED // ",
-  },
-  {
-    title: "PULSE RATE",
-    desc: "SYNCHRONIZING BEATS",
-    sub: "BPM MATCHING SEQUENCE // ",
-  },
-  {
-    title: "FLAT LINE",
-    desc: "TERMINATING PROCESS",
-    sub: "CONNECTION TERMINATED // ",
-  },
+  { title: "SOUND WAVE", desc: "VISUALIZING THE AUDIO", sub: "FREQUENCY MODULATION SYNC // " },
+  { title: "ECHO LOOP", desc: "REPEATING THE SIGNALS", sub: "FEEDBACK LOOP DETECTED // " },
+  { title: "NOISE GATE", desc: "FILTERING INTERFERENCE", sub: "THRESHOLD LIMIT REACHED // " },
+  { title: "PULSE RATE", desc: "SYNCHRONIZING BEATS", sub: "BPM MATCHING SEQUENCE // " },
+  { title: "FLAT LINE", desc: "TERMINATING PROCESS", sub: "CONNECTION TERMINATED // " },
 ];
 
 // --- Deck Objects ---
-let deckA = {
-  name: "DECK A",
-  data: deckA_Data,
-  index: 0,
-  rotation: 0,
-  targetRotation: 0,
-  isLooping: false,
-  visualMode: 1,
-  sensors: [],
-};
-let deckB = {
-  name: "DECK B",
-  data: deckB_Data,
-  index: 0,
-  rotation: 0,
-  targetRotation: 0,
-  isLooping: false,
-  visualMode: 1,
-  sensors: [],
-};
+let deckA = { name: "DECK A", data: deckA_Data, index: 0, rotation: 0, targetRotation: 0, isLooping: false, visualMode: 1, sensors: [] };
+let deckB = { name: "DECK B", data: deckB_Data, index: 0, rotation: 0, targetRotation: 0, isLooping: false, visualMode: 1, sensors: [] };
 
 // --- Global Variables ---
 let crossFaderVal = 0.5;
@@ -98,35 +40,36 @@ let drawScale = 1;
 let drawOffX = 0;
 let drawOffY = 0;
 
+// 모바일 드래그 계산용 변수
+let prevTouchY = 0;
+let prevTouchX = 0;
+
 function setup() {
   createCanvas(windowWidth, windowHeight);
-  // 커서 숨김 (모바일에서는 의미 없으나 PC에서는 숨김)
-  // noCursor();
-
   angleMode(DEGREES);
   rectMode(CENTER);
   textFont("Arial");
 
-  // [수정] 타이틀을 캔버스 그림이 아닌 HTML DOM 요소로 생성 (위치 고정 및 터치 통과를 위해)
-  let titleDiv = createDiv("SYNTAX CONSOLE");
-  titleDiv.id("syntaxconsole");
-  // CSS 스타일 적용 (JS에서 직접 주입)
-  titleDiv.style("position", "fixed");
-  titleDiv.style("bottom", "0");
-  titleDiv.style("left", "0");
-  titleDiv.style("width", "100%");
-  titleDiv.style("text-align", "center");
-  titleDiv.style("padding-bottom", "20px");
-  titleDiv.style("font-family", "Arial, sans-serif");
-  titleDiv.style("font-weight", "bold");
-  titleDiv.style("font-size", "5vw"); // 반응형 폰트 크기
-  titleDiv.style("color", "#282828");
-  titleDiv.style("z-index", "9999");
-  titleDiv.style("pointer-events", "none"); // ★ 핵심: 터치가 글자를 뚫고 지나감
-  titleDiv.style("user-select", "none");
+  // [타이틀 HTML 생성]
+  let titleDiv = createDiv('SYNTAX CONSOLE');
+  titleDiv.id('syntaxconsole');
+  titleDiv.style('position', 'fixed');
+  titleDiv.style('bottom', '0');
+  titleDiv.style('left', '0');
+  titleDiv.style('width', '100%');
+  titleDiv.style('text-align', 'center');
+  titleDiv.style('padding-bottom', '20px');
+  titleDiv.style('font-family', 'Arial, sans-serif');
+  titleDiv.style('font-weight', 'bold');
+  titleDiv.style('font-size', '5vw'); 
+  titleDiv.style('color', '#282828');
+  titleDiv.style('z-index', '9999');
+  titleDiv.style('pointer-events', 'none'); // 터치 통과
+  titleDiv.style('user-select', 'none');
 
   mic = new p5.AudioIn();
-
+  // 모바일 브라우저 정책 대응: 시작 시에는 일시정지 상태일 수 있음
+  
   oscClick = new p5.Oscillator("square");
   envClick = new p5.Envelope(0.001, 0.05, 0.01, 0.05);
   oscClick.start();
@@ -189,41 +132,22 @@ function draw() {
   let deckY = DESIGN_H * 0.35;
   let scaleBase = min(deckW, deckH) * 0.8;
 
-  drawDeck(
-    DESIGN_W * 0.25,
-    deckY,
-    deckW,
-    deckH,
-    deckA,
-    ["A", "S", "D", "F"],
-    scaleBase
-  );
-  drawDeck(
-    DESIGN_W * 0.75,
-    deckY,
-    deckW,
-    deckH,
-    deckB,
-    ["H", "J", "K", "L"],
-    scaleBase
-  );
-  drawMixer(
-    DESIGN_W / 2,
-    DESIGN_H / 2,
-    DESIGN_W * 0.2,
-    DESIGN_H * 0.7,
-    refSize
-  );
-
-  // [수정] drawBottomTitle() 삭제됨 -> HTML DOM으로 대체
+  drawDeck(DESIGN_W * 0.25, deckY, deckW, deckH, deckA, ["A", "S", "D", "F"], scaleBase);
+  drawDeck(DESIGN_W * 0.75, deckY, deckW, deckH, deckB, ["H", "J", "K", "L"], scaleBase);
+  drawMixer(DESIGN_W / 2, DESIGN_H / 2, DESIGN_W * 0.2, DESIGN_H * 0.7, refSize);
 
   pop();
 
-  // 5. Cursor
-  // 모바일이 아닐 때만 커서 그리기 (선택 사항)
-  // if (touches.length === 0) {
-  drawInvertedCursor();
-  // }
+  // 5. Cursor & Visual Feedback
+  // 터치 위치 디버깅 (빨간 점으로 터치 인식 확인)
+  if (touches.length > 0) {
+    fill(255, 0, 0, 150);
+    noStroke();
+    ellipse(touches[0].x, touches[0].y, 40);
+  } else {
+    // 마우스 커서
+    drawInvertedCursor();
+  }
 
   if (keyIsDown(32)) {
     filter(INVERT);
@@ -231,61 +155,35 @@ function draw() {
 }
 
 // --------------------------------------------------------
-// Mouse & Touch Logic (Updated for Mobile)
+// ★ INPUT HANDLING (TOUCH & MOUSE 통합) ★
 // --------------------------------------------------------
 
-function getVirtualMouse() {
-  // 실제 마우스/터치 좌표를 1600x900 기준 좌표로 변환
-  let vx = (mouseX - drawOffX) / drawScale;
-  let vy = (mouseY - drawOffY) / drawScale;
+// [핵심] 좌표 변환 함수
+function getVirtualPos(x, y) {
+  let vx = (x - drawOffX) / drawScale;
+  let vy = (y - drawOffY) / drawScale;
   return { x: vx, y: vy };
 }
 
-// [추가] 모바일 드래그 인터랙션 (휠 대체)
-function touchMoved() {
-  // 브라우저 기본 스크롤 방지
-  if (touches.length > 1) return;
-
-  // Y축 움직임 감지 (스크래칭)
-  let speed = (mouseY - pmouseY) * 0.5;
-
-  let influenceA = map(crossFaderVal, 0.6, 0.0, 0, 1, true);
-  let influenceB = map(crossFaderVal, 0.4, 1.0, 0, 1, true);
-
-  if (influenceA > 0) deckA.targetRotation += speed * influenceA;
-  if (influenceB > 0) deckB.targetRotation += speed * influenceB;
-
-  // 하단부 터치 후 가로(X축) 드래그 시 크로스페이더 조절
-  if (mouseY > height * 0.6) {
-    let xSpeed = (mouseX - pmouseX) * 0.002;
-    // 움직임이 있을 때만 업데이트
-    if (abs(xSpeed) > 0) {
-      crossFaderVal += xSpeed;
-      crossFaderVal = constrain(crossFaderVal, 0, 1);
-      if (frameCount % 5 === 0) playNoise();
-    }
+// [핵심] 입력 처리 함수 (마우스/터치 공용)
+function handleInputStart(inputX, inputY) {
+  // 1. 오디오 컨텍스트 강제 시작 (모바일 필수)
+  if (getAudioContext().state !== 'running') {
+    userStartAudio();
   }
-
-  return false;
-}
-
-// [수정] 마우스/터치 클릭 시 버튼 동작 처리
-function mousePressed() {
-  userStartAudio();
-  if (mic) mic.start();
+  if(mic) {
+    try { mic.start(); } catch(e) {}
+  }
+  
   playClick();
 
-  let vMouse = getVirtualMouse();
-  // 중앙(0,0) 기준 좌표가 아닌 좌상단(0,0) 기준 좌표값 그대로 사용 (draw 함수 내 translate 고려)
-  // 단, draw 함수에서는 translate(drawOffX, drawOffY) 후 scale(drawScale)을 했으므로
-  // vMouse는 이미 스케일과 오프셋이 반영된 1600x900 공간의 좌표임.
+  // 좌표 변환
+  let vPos = getVirtualPos(inputX, inputY);
+  // 로컬 좌표 (중심점 0,0 기준)
+  let localX = vPos.x - DESIGN_W / 2;
+  let localY = vPos.y - DESIGN_H / 2;
 
-  // 믹서나 덱의 좌표계는 DESIGN_W/2 를 중심으로 그려지는 경우가 많음.
-  // 따라서 거리 계산을 위해 로컬 좌표 계산
-  let localX = vMouse.x - DESIGN_W / 2;
-  let localY = vMouse.y - DESIGN_H / 2;
-
-  // 1. Mixer Buttons (Visual Mode)
+  // --- A. Mixer Buttons ---
   let mh = DESIGN_H * 0.7;
   let mw = DESIGN_W * 0.2;
   let ky_start = -mh * 0.3;
@@ -296,43 +194,35 @@ function mousePressed() {
     let row = floor(i / 2);
     let kx = col === 0 ? -mw * 0.25 : mw * 0.25;
     let ky = ky_start + row * k_gap;
-
-    // 믹서 버튼 히트 박스
-    if (dist(localX, localY, kx, ky) < 30) {
+    
+    // [수정] 히트박스 크기 30 -> 60 (모바일 터치 쉽게)
+    if (dist(localX, localY, kx, ky) < 60) {
       activeDeck.visualMode = i + 1;
       deckA.sensors = [];
       deckB.sensors = [];
       playTone(80 + i);
-      return;
+      return; 
     }
   }
 
-  // 2. Deck Buttons (Track Change)
-  // Deck 위치와 크기 (drawDeck 함수와 동일한 로직)
+  // --- B. Deck Buttons ---
   let deckW = DESIGN_W * 0.35;
   let deckH = DESIGN_H * 0.6;
-  // 덱의 중심 Y좌표 (DESIGN_H 기준) -> 로컬 좌표로 변환 필요
-  // drawDeck 호출 시: y = DESIGN_H * 0.35
-  // 우리가 사용하는 localY는 화면 중앙이 (0,0)이므로:
-  let deckCenterY = DESIGN_H * 0.35 - DESIGN_H / 2;
-
+  let deckCenterY = (DESIGN_H * 0.35) - (DESIGN_H / 2); 
   let btnGap = deckW * 0.2;
-  let btnY_Offset = -deckH * 0.4;
+  let btnY_Offset = -deckH * 0.4; 
 
-  // Deck A Center X (로컬 좌표)
-  let deckACenterX = DESIGN_W * 0.25 - DESIGN_W / 2;
-  // Deck B Center X (로컬 좌표)
-  let deckBCenterX = DESIGN_W * 0.75 - DESIGN_W / 2;
+  let deckACenterX = (DESIGN_W * 0.25) - (DESIGN_W / 2);
+  let deckBCenterX = (DESIGN_W * 0.75) - (DESIGN_W / 2);
 
   function checkDeckBtns(deck, centerX) {
     for (let i = 0; i < 4; i++) {
       let bx = (i - 1.5) * btnGap;
-      // 버튼의 절대 위치 (로컬 좌표계 상)
       let btnAbsX = centerX + bx;
       let btnAbsY = deckCenterY + btnY_Offset;
 
-      if (dist(localX, localY, btnAbsX, btnAbsY) < 40) {
-        // 터치 범위 넉넉하게
+      // [수정] 히트박스 40 -> 70 (모바일 터치 쉽게)
+      if (dist(localX, localY, btnAbsX, btnAbsY) < 70) { 
         changeTrack(deck, i);
         return true;
       }
@@ -345,7 +235,57 @@ function mousePressed() {
   }
 }
 
-// 마우스 휠 (PC용)
+// 1. 터치 시작 (모바일)
+function touchStarted() {
+  if (touches.length > 0) {
+    prevTouchX = touches[0].x;
+    prevTouchY = touches[0].y;
+    handleInputStart(touches[0].x, touches[0].y);
+  }
+  return false; // 브라우저 기본 동작 방지
+}
+
+// 2. 마우스 클릭 (PC)
+function mousePressed() {
+  // 터치가 아닐 때만 실행 (중복 방지)
+  if (touches.length === 0) {
+    handleInputStart(mouseX, mouseY);
+  }
+}
+
+// 3. 터치 드래그 (모바일 - 휠 대체)
+function touchMoved() {
+  if (touches.length > 0) {
+    let currX = touches[0].x;
+    let currY = touches[0].y;
+
+    // Y축 드래그 (스크래칭)
+    let speed = (currY - prevTouchY) * 0.5; 
+    
+    let influenceA = map(crossFaderVal, 0.6, 0.0, 0, 1, true);
+    let influenceB = map(crossFaderVal, 0.4, 1.0, 0, 1, true);
+
+    if (influenceA > 0) deckA.targetRotation += speed * influenceA;
+    if (influenceB > 0) deckB.targetRotation += speed * influenceB;
+    
+    // 화면 하단부 가로 드래그 (크로스페이더)
+    if (currY > height * 0.6) {
+       let xSpeed = (currX - prevTouchX) * 0.002;
+       if (abs(xSpeed) > 0) {
+         crossFaderVal += xSpeed;
+         crossFaderVal = constrain(crossFaderVal, 0, 1);
+         if (frameCount % 5 === 0) playNoise();
+       }
+    }
+
+    // 좌표 갱신
+    prevTouchX = currX;
+    prevTouchY = currY;
+  }
+  return false; // 스크롤 방지
+}
+
+// 4. 마우스 휠 (PC)
 function mouseWheel(e) {
   let speed = e.deltaY * 0.5;
   let influenceA = map(crossFaderVal, 0.6, 0.0, 0, 1, true);
@@ -362,7 +302,6 @@ function mouseWheel(e) {
   return false;
 }
 
-// 키보드 입력 (PC용)
 function keyPressed() {
   if (keyCode === 65) changeTrack(deckA, 0);
   if (keyCode === 83) changeTrack(deckA, 1);
@@ -395,41 +334,25 @@ function updateSensors(deck, s) {
     deck.sensors = [];
     deck.lastVisualMode = deck.visualMode;
 
-    let r1 = s * 0.18,
-      r2 = s * 0.28,
-      r3 = s * 0.38,
-      baseSize = s * 0.02;
+    let r1 = s * 0.18, r2 = s * 0.28, r3 = s * 0.38, baseSize = s * 0.02;
     let mode = deck.visualMode;
 
-    if (mode === 1) {
-      // Cross
-      let dists = [r1, r2, r3],
-        angles = [0, 90, 180, 270];
-      for (let d of dists)
-        for (let a of angles)
-          deck.sensors.push(createSensor(d * cos(a), d * sin(a), baseSize));
-    } else if (mode === 2) {
-      // Ring
-      let counts = [8, 12, 16],
-        radii = [r1, r2, r3];
-      for (let k = 0; k < 3; k++)
-        for (let i = 0; i < counts[k]; i++) {
+    if (mode === 1) { 
+      let dists = [r1, r2, r3], angles = [0, 90, 180, 270];
+      for (let d of dists) for (let a of angles) deck.sensors.push(createSensor(d * cos(a), d * sin(a), baseSize));
+    } else if (mode === 2) { 
+      let counts = [8, 12, 16], radii = [r1, r2, r3];
+      for (let k = 0; k < 3; k++) for (let i = 0; i < counts[k]; i++) {
           let a = (360 / counts[k]) * i;
-          deck.sensors.push(
-            createSensor(radii[k] * cos(a), radii[k] * sin(a), baseSize)
-          );
+          deck.sensors.push(createSensor(radii[k] * cos(a), radii[k] * sin(a), baseSize));
         }
-    } else if (mode === 3) {
-      // Scatter
+    } else if (mode === 3) { 
       randomSeed(999);
       for (let i = 0; i < 25; i++) {
-        let rChoice = random([r1, r2, r3]),
-          r = rChoice + random(-s * 0.02, s * 0.02),
-          a = random(360);
+        let rChoice = random([r1, r2, r3]), r = rChoice + random(-s * 0.02, s * 0.02), a = random(360);
         deck.sensors.push(createSensor(r * cos(a), r * sin(a), baseSize));
       }
-    } else if (mode === 4) {
-      // Triple Arc
+    } else if (mode === 4) { 
       let count = 12;
       for (let k = 0; k < 3; k++) {
         let r = [r1, r2, r3][k];
@@ -438,19 +361,15 @@ function updateSensors(deck, s) {
           deck.sensors.push(createSensor(r * cos(a), r * sin(a), baseSize));
         }
       }
-    } else if (mode === 5) {
-      // Spiral
+    } else if (mode === 5) { 
       let count = 36;
       for (let i = 0; i < count; i++) {
-        let r = map(i, 0, count, s * 0.1, s * 0.45),
-          a = i * 20;
+        let r = map(i, 0, count, s * 0.1, s * 0.45), a = i * 20;
         deck.sensors.push(createSensor(r * cos(a), r * sin(a), baseSize));
       }
-    } else if (mode === 6) {
-      // Grid
+    } else if (mode === 6) { 
       let grid = s * 0.1;
-      for (let x = -s * 0.4; x <= s * 0.4; x += grid)
-        for (let y = -s * 0.4; y <= s * 0.4; y += grid) {
+      for (let x = -s * 0.4; x <= s * 0.4; x += grid) for (let y = -s * 0.4; y <= s * 0.4; y += grid) {
           if (dist(0, 0, x, y) < s * 0.42 && dist(0, 0, x, y) > s * 0.12)
             deck.sensors.push(createSensor(x, y, baseSize));
         }
@@ -502,7 +421,6 @@ function drawDeck(x, y, w, h, deck, btnLabels, scaleBase) {
 
   let btnY = -h * 0.4;
   let btnGap = w * 0.2;
-  // KeyCodes only for PC visual feedback
   let keyCodes = deck.name === "DECK A" ? [65, 83, 68, 70] : [72, 74, 75, 76];
 
   for (let i = 0; i < 4; i++) {
