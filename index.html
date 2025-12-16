@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>SYNTAX CONSOLE - BODY INTERACTION</title>
+    <title>SYNTAX CONSOLE - ASCII MATRIX</title>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
@@ -15,53 +15,35 @@
       body {
         margin: 0;
         padding: 0;
-        overflow: hidden; /* 스크롤바 제거 */
-        background-color: #111; /* 비디오 로딩 전 배경색 */
-        touch-action: none; /* 모바일 제스처 막기 */
+        overflow: hidden;
+        background-color: #000;
+        touch-action: none;
         overscroll-behavior: none;
         user-select: none;
         -webkit-user-select: none;
-
-        /* 전체 화면 반전 트랜지션 */
-        transition: filter 0.1s linear;
       }
 
-      /* [추가됨] 웹캠 배경 스타일링 (Text Rain 감성) */
-      #webcam-bg {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        z-index: -1; /* 캔버스 뒤로 배치 */
-
-        /* 거울 모드 & 흑백/고대비 필터 */
-        transform: scaleX(-1);
-        filter: grayscale(100%) contrast(150%) brightness(60%) blur(4px);
-        opacity: 0.5; /* 배경과 섞이게 투명도 조절 */
-      }
-
-      /* 스페이스바 누를 때 전체 반전 */
-      body.global-invert {
-        filter: invert(1);
+      /* P5가 캡처한 비디오 요소는 숨김 (캔버스에 그릴 것이므로) */
+      video {
+        display: none;
       }
 
       canvas {
         display: block;
-        cursor: none; /* 기본 마우스 커서 숨김 */
+        cursor: none;
+      }
+
+      /* 스페이스바 누르면 색상 반전 */
+      body.global-invert {
+        filter: invert(1);
       }
     </style>
   </head>
   <body>
-    <video id="webcam-bg" autoplay muted playsinline></video>
-
     <script>
       // ==========================================
-      // SYNTAX CONSOLE - WITH WEBCAM BACKGROUND
+      // SYNTAX CONSOLE - ASCII BACKGROUND
       // ==========================================
-
-      /* [주제: The Body as a Canvas for Text] */
 
       let deckA_Data = [
         { title: "MY BODY", desc: "IS A CANVAS", sub: "DETECTING SHAPE // " },
@@ -131,8 +113,7 @@
       let crossFaderVal = 0.5;
       let activeDeck = deckA;
 
-      // Audio
-      let mic;
+      let mic, capture;
       let oscClick, envClick, oscTone, envTone, engineOsc, noiseOsc, noiseEnv;
       let audioStarted = false;
 
@@ -142,11 +123,16 @@
       let drawOffX = 0;
       let drawOffY = 0;
 
-      const C_BG = 250;
       const C_PANEL = 255;
       const C_TEXT = 40;
       const C_LINE_SUBTLE = 220;
       const C_SHADOW_COL = "rgba(0, 0, 0, 0.08)";
+
+      // 아스키 아트용 변수
+      // 밀도: 이 문자들이 밝기에 따라 매핑됨
+      const density = "Ñ@#W$9876543210?!abc;:+=-,._                    ";
+      const wStep = 12; // 가로 텍스트 간격 (작을수록 고해상도지만 느려짐)
+      const hStep = 12; // 세로 텍스트 간격
 
       let pmouseX_FIX = 0;
       let pmouseY_FIX = 0;
@@ -156,27 +142,28 @@
         angleMode(DEGREES);
         rectMode(CENTER);
 
-        textFont("Arial");
+        // 캡처 생성 (해상도를 낮춰서 성능 최적화)
+        capture = createCapture(VIDEO);
+        capture.size(160, 120); // 아스키 변환을 위해 작게 캡처
+        capture.hide();
+
+        textFont("Courier New"); // 배경은 고정폭 글꼴이 느낌이 좋음
         textStyle(NORMAL);
 
         try {
           mic = new p5.AudioIn();
-
           oscClick = new p5.Oscillator("square");
           envClick = new p5.Envelope(0.001, 0.05, 0.01, 0.05);
           oscClick.start();
           oscClick.amp(0);
-
           oscTone = new p5.Oscillator("sine");
           envTone = new p5.Envelope(0.01, 0.2, 0.1, 0.2);
           oscTone.start();
           oscTone.amp(0);
-
           engineOsc = new p5.Oscillator("sawtooth");
           engineOsc.freq(50);
           engineOsc.start();
           engineOsc.amp(0);
-
           noiseOsc = new p5.Noise("white");
           noiseEnv = new p5.Envelope(0.01, 0.1, 0, 0.1);
           noiseOsc.start();
@@ -190,9 +177,53 @@
       }
 
       function draw() {
-        // [수정됨] 배경을 투명하게 처리하여 뒤의 Video 태그가 보이게 함
-        clear();
+        // 1. 배경 클리어 (검정)
+        background(0);
 
+        // 2. 아스키 아트 배경 그리기
+        if (capture.width > 0) {
+          capture.loadPixels();
+
+          push();
+          // 거울 모드 (좌우 반전)
+          translate(width, 0);
+          scale(-1, 1);
+
+          fill(100); // 회색 텍스트
+          noStroke();
+          textSize(hStep);
+          textAlign(LEFT, TOP);
+
+          // 화면을 그리드로 나누어 아스키 문자 배치
+          // capture 이미지의 픽셀을 읽어서 화면에 글자로 뿌림
+          for (let j = 0; j < capture.height; j++) {
+            for (let i = 0; i < capture.width; i++) {
+              const pixelIndex = (i + j * capture.width) * 4;
+              const r = capture.pixels[pixelIndex + 0];
+              const g = capture.pixels[pixelIndex + 1];
+              const b = capture.pixels[pixelIndex + 2];
+              const avg = (r + g + b) / 3;
+
+              // 밝기에 맞는 문자 선택
+              const len = density.length;
+              const charIndex = floor(map(avg, 0, 255, len - 1, 0));
+
+              // 빈 공백이 아니면 그림
+              if (charIndex >= 0 && charIndex < len) {
+                const c = density.charAt(charIndex);
+                if (c !== " ") {
+                  // 화면 좌표로 변환
+                  let x = map(i, 0, capture.width, 0, width);
+                  let y = map(j, 0, capture.height, 0, height);
+                  text(c, x, y);
+                }
+              }
+            }
+          }
+          pop();
+        }
+
+        // 3. 콘솔 UI 레이아웃 계산
         let scaleW = width / DESIGN_W;
         let scaleH = height / DESIGN_H;
         drawScale = min(scaleW, scaleH);
@@ -214,10 +245,13 @@
         if (crossFaderVal < 0.45) activeDeck = deckA;
         else if (crossFaderVal > 0.55) activeDeck = deckB;
 
-        // [1. 기계 장치 그리기]
+        // 4. 전면 콘솔 그리기
         push();
         translate(drawOffX, drawOffY);
         scale(drawScale);
+
+        // 콘솔 텍스트 폰트는 Arial로 복구 (배경은 Courier New 였음)
+        textFont("Arial");
 
         let refSize = min(DESIGN_W, DESIGN_H);
         let deckW = DESIGN_W * 0.35;
@@ -252,29 +286,22 @@
         );
         pop();
 
-        // [2. 타이틀 그리기]
+        // 5. 하단 타이틀
         push();
         resetMatrix();
-        // 텍스트가 영상 위에서도 잘 보이도록 흰색 테두리나 색상 조정 가능하지만
-        // 현재 컨셉상 검정(C_TEXT) 유지하거나 상황 봐서 흰색으로 변경 고려
         fill(255);
-
         noStroke();
         textAlign(CENTER, BOTTOM);
         textSize(width * 0.1);
         textStyle(BOLD);
+        textFont("Arial"); // 타이틀 폰트 확인
 
-        // 2. 자간 좁히기 (이 줄을 추가하세요)
-        // -0.05em, -10px 등으로 숫자를 바꿔서 간격을 조절하세요.
-        drawingContext.letterSpacing = "-0.05em";
-
+        drawingContext.letterSpacing = "-0.05em"; // 자간 좁게
         text("SYNTAX CONSOLE", width / 2, height - 30);
-
-        // 3. 자간 초기화 (다른 글자가 깨지지 않게 필수)
         drawingContext.letterSpacing = "0px";
         pop();
 
-        // [3. 커서 그리기]
+        // 6. 커서
         if (touches.length > 0) {
           fill(0, 50);
           noStroke();
@@ -290,7 +317,7 @@
         pmouseY_FIX = mouseY;
       }
 
-      // --- Interaction ---
+      // --- Interaction & Helpers (기존 로직 유지) ---
       function resumeAudio() {
         if (!audioStarted) {
           userStartAudio().then(() => {
@@ -299,11 +326,8 @@
           });
         }
       }
-
       function keyPressed() {
-        if (keyCode === 32) {
-          document.body.classList.add("global-invert");
-        }
+        if (keyCode === 32) document.body.classList.add("global-invert");
         if (keyCode === 65) changeTrack(deckA, 0);
         if (keyCode === 83) changeTrack(deckA, 1);
         if (keyCode === 68) changeTrack(deckA, 2);
@@ -320,19 +344,14 @@
           playTone(80 + mode);
         }
       }
-
       function keyReleased() {
-        if (keyCode === 32) {
-          document.body.classList.remove("global-invert");
-        }
+        if (keyCode === 32) document.body.classList.remove("global-invert");
       }
-
       function touchMoved() {
         let diffY = mouseY - pmouseY;
         let diffX = mouseX - pmouseX;
         if (abs(diffY) > 100) diffY = 0;
         if (abs(diffX) > 100) diffX = 0;
-
         if (mouseY > height * 0.75) {
           if (abs(diffX) > 0) {
             crossFaderVal += diffX * 0.002;
@@ -346,20 +365,17 @@
         }
         return false;
       }
-
       function touchStarted() {
         resumeAudio();
         handleTap(mouseX, mouseY);
         return false;
       }
-
       function mousePressed() {
         if (touches.length === 0) {
           resumeAudio();
           handleTap(mouseX, mouseY);
         }
       }
-
       function mouseDragged() {
         if (touches.length === 0) touchMoved();
         return false;
@@ -371,7 +387,6 @@
         let vy = (my - drawOffY) / drawScale;
         let localX = vx - DESIGN_W / 2;
         let localY = vy - DESIGN_H / 2;
-
         let mh = DESIGN_H * 0.7;
         let mw = DESIGN_W * 0.2;
         let ky_start = -mh * 0.3;
@@ -396,7 +411,6 @@
         let btnY_Offset = -deckH * 0.4;
         let deckACenterX = DESIGN_W * 0.25 - DESIGN_W / 2;
         let deckBCenterX = DESIGN_W * 0.75 - DESIGN_W / 2;
-
         function checkDeckBtns(deck, centerX) {
           for (let i = 0; i < 4; i++) {
             let bx = (i - 1.5) * btnGap;
@@ -413,7 +427,6 @@
           checkDeckBtns(deckB, deckBCenterX);
       }
 
-      // --- Helpers ---
       function initSensors(deck) {
         deck.sensors = [];
       }
@@ -530,7 +543,6 @@
       function playNoise() {
         if (noiseOsc) noiseEnv.play(noiseOsc);
       }
-
       function drawDeck(x, y, w, h, deck, btnLabels, scaleBase) {
         push();
         translate(x, y);
@@ -558,7 +570,6 @@
         drawKineticJogWheel(0, h * 0.15, scaleBase, deck);
         pop();
       }
-
       function drawKineticJogWheel(x, y, s, deck) {
         updateSensors(deck, s);
         push();
@@ -584,9 +595,7 @@
         fill(C_TEXT);
         noStroke();
         textAlign(CENTER, CENTER);
-
         textStyle(NORMAL);
-
         let wheelTextSize = s * 0.045;
         textSize(wheelTextSize);
         drawTextRing(
@@ -617,7 +626,6 @@
         ellipse(0, 0, s * 0.1);
         pop();
       }
-
       function drawTextRing(str, radius, fontSize, deck, s) {
         textSize(fontSize);
         let chars = str.split("");
@@ -640,7 +648,6 @@
           pop();
         }
       }
-
       function drawMixer(x, y, w, h, refSize) {
         push();
         translate(x, y);
@@ -684,7 +691,6 @@
         drawWaveform(0, -h * 0.05, w * 0.8, 30);
         pop();
       }
-
       function drawKnob(x, y, s, rotation, isActive) {
         push();
         translate(x, y);
@@ -699,7 +705,6 @@
         line(0, 0, 0, -s * 0.4);
         pop();
       }
-
       function drawRoundBtn(x, y, s, keyCodeNum, label, deck, targetIndex) {
         let isPressed = keyIsDown(keyCodeNum);
         push();
@@ -721,7 +726,6 @@
         text(label, 0, 0);
         pop();
       }
-
       function drawRectBtn(x, y, w, h, label, keyCodeNum) {
         let isPressed = keyIsDown(keyCodeNum);
         push();
@@ -743,11 +747,9 @@
         text(label, 0, 0);
         pop();
       }
-
       function drawWaveform(x, y, w, h) {
         let vol = 0;
         if (audioStarted && mic) vol = mic.getLevel();
-
         push();
         translate(x, y);
         noFill();
@@ -763,7 +765,6 @@
         endShape();
         pop();
       }
-
       function drawInvertedCursor() {
         push();
         blendMode(DIFFERENCE);
@@ -772,7 +773,6 @@
         ellipse(mouseX, mouseY, 30);
         pop();
       }
-
       function mouseWheel(e) {
         let speed = e.deltaY * 0.5;
         let influenceA = map(crossFaderVal, 0.6, 0.0, 0, 1, true);
@@ -786,14 +786,11 @@
         }
         return false;
       }
-
       function windowResized() {
         resizeCanvas(windowWidth, windowHeight);
         deckA.sensors = [];
         deckB.sensors = [];
       }
-
-      // [추가됨] 웹캠 시작 함수
       async function startWebcam() {
         const video = document.getElementById("webcam-bg");
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
@@ -803,12 +800,10 @@
             });
             video.srcObject = stream;
           } catch (error) {
-            console.error("카메라 접근 실패 (혹은 거부됨):", error);
+            console.error("카메라 접근 실패:", error);
           }
         }
       }
-
-      // 페이지 로드 시 웹캠 실행
       window.addEventListener("load", startWebcam);
     </script>
   </body>
