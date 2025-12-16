@@ -6,7 +6,6 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-
     <title>SYNTAX CONSOLE</title>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
@@ -16,20 +15,17 @@
       body {
         margin: 0;
         padding: 0;
-        overflow: hidden; /* 스크롤바 없애기 */
-        background-color: #fafafa; /* 배경색 (sketch.js의 C_BG와 맞춤) */
-
-        /* 모바일 터치 제스처(새로고침, 뒤로가기 등) 막기 */
-        touch-action: none;
+        overflow: hidden; /* 스크롤바 제거 */
+        background-color: #fafafa;
+        touch-action: none; /* 모바일 제스처 막기 */
         overscroll-behavior: none;
       }
-
       canvas {
-        display: block; /* 캔버스 주변의 미세한 여백 제거 */
+        display: block;
       }
     </style>
   </head>
   <body>
-    <s454114cript src="sketch.js"></script>
+    <script src="sketch.js"></script>
   </body>
 </html>
