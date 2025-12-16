@@ -18,10 +18,20 @@
             overscroll-behavior: none;
             user-select: none;
             -webkit-user-select: none;
+            
+            /* [추가] 전체 화면 반전을 위한 트랜지션 */
+            transition: filter 0.05s linear; 
         }
+        
+        /* [추가] 스페이스바 누를 때 적용될 클래스 */
+        body.global-invert {
+            filter: invert(1);
+        }
+
         canvas {
             display: block;
         }
+
         #syntaxconsole {
             position: fixed;
             bottom: 0;
@@ -32,16 +42,28 @@
             font-family: Arial, sans-serif;
             font-weight: bold;
             
-            /* [수정] 한 줄 유지 및 사이즈 조정 */
-            white-space: nowrap; /* 절대 줄바꿈 하지 않음 */
-            font-size: 10vw;     /* 화면 폭에 맞춰 한 줄에 들어가는 최대 크기 */
+            /* 한 줄 유지 및 사이즈 조정 */
+            white-space: nowrap; 
+            font-size: 10vw;     
             letter-spacing: -2px; 
             
-            color: #282828;
+            /* [수정] 완전 블랙 */
+            color: #000000;
             z-index: 9999;
-            pointer-events: none;
+            
+            /* [수정] 마우스 오버 인식을 위해 auto로 변경 */
+            pointer-events: auto; 
             user-select: none;
-            opacity: 0.9;
+            opacity: 1.0;
+            
+            /* 호버 효과 부드럽게 */
+            transition: filter 0.1s;
+        }
+
+        /* [추가] 타이틀에 마우스 올리면 반전 */
+        #syntaxconsole:hover {
+            filter: invert(1);
+            cursor: pointer;
         }
     </style>
 </head>
@@ -172,7 +194,8 @@
                 drawInvertedCursor();
             }
 
-            if (keyIsDown(32)) filter(INVERT);
+            // [수정] 스페이스바 로직을 keyPressed/keyReleased로 이동하여 전체 반전 구현
+            // draw 내의 filter(INVERT)는 삭제됨
             
             pmouseX_FIX = mouseX;
             pmouseY_FIX = mouseY;
@@ -185,6 +208,27 @@
                     if(mic) mic.start();
                     audioStarted = true;
                 });
+            }
+        }
+
+        // [추가] 키보드 누를 때 (스페이스바 -> 전체 반전)
+        function keyPressed() {
+            if (keyCode === 32) { // SPACE
+                document.body.classList.add('global-invert');
+            }
+            
+            // 기존 키 제어 로직
+            if (keyCode === 65) changeTrack(deckA, 0); if (keyCode === 83) changeTrack(deckA, 1);
+            if (keyCode === 68) changeTrack(deckA, 2); if (keyCode === 70) changeTrack(deckA, 3);
+            if (keyCode === 72) changeTrack(deckB, 0); if (keyCode === 74) changeTrack(deckB, 1);
+            if (keyCode === 75) changeTrack(deckB, 2); if (keyCode === 76) changeTrack(deckB, 3);
+            if (key >= "1" && key <= "6") { let mode = int(key); activeDeck.visualMode = mode; deckA.sensors = []; deckB.sensors = []; playTone(80 + mode); }
+        }
+
+        // [추가] 키보드 뗄 때 (스페이스바 -> 반전 해제)
+        function keyReleased() {
+            if (keyCode === 32) { // SPACE
+                document.body.classList.remove('global-invert');
             }
         }
 
@@ -438,14 +482,6 @@
             if (influenceA > 0) deckA.targetRotation += speed * influenceA; if (influenceB > 0) deckB.targetRotation += speed * influenceB;
             if (abs(e.deltaX) > 5) { crossFaderVal += e.deltaX * 0.001; crossFaderVal = constrain(crossFaderVal, 0, 1); if (frameCount % 5 === 0) playNoise(); }
             return false;
-        }
-
-        function keyPressed() {
-            if (keyCode === 65) changeTrack(deckA, 0); if (keyCode === 83) changeTrack(deckA, 1);
-            if (keyCode === 68) changeTrack(deckA, 2); if (keyCode === 70) changeTrack(deckA, 3);
-            if (keyCode === 72) changeTrack(deckB, 0); if (keyCode === 74) changeTrack(deckB, 1);
-            if (keyCode === 75) changeTrack(deckB, 2); if (keyCode === 76) changeTrack(deckB, 3);
-            if (key >= "1" && key <= "6") { let mode = int(key); activeDeck.visualMode = mode; deckA.sensors = []; deckB.sensors = []; playTone(80 + mode); }
         }
 
         function windowResized() { resizeCanvas(windowWidth, windowHeight); deckA.sensors = []; deckB.sensors = []; }
