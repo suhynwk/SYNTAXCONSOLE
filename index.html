@@ -68,7 +68,13 @@ let deckB_Data = [
 ];
 
 // 아래 deckA, deckB 생성 코드는 기존 그대로 두시면 됩니다.
-        
+                let deckA = { name: "DECK A", data: deckA_Data, index: 0, rotation: 0, targetRotation: 0, isLooping: false, visualMode: 1, sensors: [] };
+
+        let deckB = { name: "DECK B", data: deckB_Data, index: 0, rotation: 0, targetRotation: 0, isLooping: false, visualMode: 1, sensors: [] };
+
+        let crossFaderVal = 0.5;
+
+        let activeDeck = deckA;
         // Audio
         let mic;
         let oscClick, envClick, oscTone, envTone, engineOsc, noiseOsc, noiseEnv;
